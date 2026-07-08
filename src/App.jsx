@@ -80,28 +80,22 @@ const ApostaCard = ({a, onClick}) => {
   );
 };
 
-// ── MODAL ADICIONAR BET ─────────────────────────────────────
-const CASAS = ["Betano","Bet365","Superbet","Novibet","Shuffle","MC Games","FortuneJack","KTO","Vai de Bet","Pixbet","Esportes da Sorte","Outra"];
+// ── MODAL ADICIONAR/EDITAR BET ──────────────────────────────
+const CASAS = ["Bet Nacional","Betano","Bet365","Superbet","Novibet","MC Games","Shuffle","FortuneJack","KTO","Vai de Bet","Pixbet","Esportes da Sorte","Outra"];
 const TIPOS = ["Simples","Dupla","Tripla","Acumuladora"];
 const STATUSES = ["Em Aberto","Green","Red","Cashout"];
 
 function ModalAdicionarBet({onSave, onClose, apostaDados}) {
   const isEdit = !!apostaDados;
+  const toISO = br => { if(!br) return hojeISO(); const [d,m,y]=br.split("/"); return `${y}-${m}-${d}`; };
 
-  const toISO = br => {
-    if (!br) return hojeISO();
-    const [d,m,y] = br.split("/");
-    return `${y}-${m}-${d}`;
-  };
-
-  const [tipo,   setTipo]    = useState(isEdit ? apostaDados.tipo   : "Simples");
-  const [casa,   setCasa]    = useState(isEdit ? apostaDados.casa   : "Betano");
-  const [valor,  setValor]   = useState(isEdit ? String(apostaDados.valor) : "");
-  const [status, setStatus]  = useState(isEdit ? apostaDados.status : "Em Aberto");
-  const [csvVal, setCsvVal]  = useState(isEdit && apostaDados.csv != null ? String(apostaDados.csv) : "");
-  const [sels,   setSels]    = useState(isEdit ? apostaDados.sels.map(s=>({nome:s.nome,odd:String(s.odd)})) : [{nome:"",odd:""}]);
-  const [erro,   setErro]    = useState("");
-  const [dataISO,setDataISO] = useState(isEdit ? toISO(apostaDados.data) : hojeISO());
+  const [tipo,   setTipo]   = useState(isEdit ? apostaDados.tipo   : "Simples");
+  const [casa,   setCasa]   = useState(isEdit ? apostaDados.casa   : "Bet Nacional");
+  const [valor,  setValor]  = useState(isEdit ? String(apostaDados.valor) : "");
+  const [status, setStatus] = useState(isEdit ? apostaDados.status : "Em Aberto");
+  const [sels,   setSels]   = useState(isEdit ? apostaDados.sels.map(s=>({nome:s.nome,odd:String(s.odd)})) : [{nome:"",odd:""}]);
+  const [erro,   setErro]   = useState("");
+  const [dataISO,setDataISO]= useState(isEdit ? toISO(apostaDados.data) : hojeISO());
 
   const addSel = () => setSels(p=>[...p,{nome:"",odd:""}]);
   const remSel = i => setSels(p=>p.filter((_,j)=>j!==i));
@@ -113,8 +107,7 @@ function ModalAdicionarBet({onSave, onClose, apostaDados}) {
     if (!ok.length) return setErro("Adicione pelo menos uma seleção com nome e odd.");
     setErro("");
     const [y,m,d] = dataISO.split("-");
-    const dataBR = `${d}/${m}/${y}`;
-    onSave({tipo,casa,valor:Number(valor),status,data:dataBR,sels:ok.map(s=>({nome:s.nome.trim(),odd:Number(s.odd)})),...(status==="Cashout"&&csvVal?{csv:Number(csvVal)}:{})});
+    onSave({tipo,casa,valor:Number(valor),status,data:`${d}/${m}/${y}`,sels:ok.map(s=>({nome:s.nome.trim(),odd:Number(s.odd)}))});
   };
 
   const lbl = {fontSize:".62rem",textTransform:"uppercase",letterSpacing:1.5,color:C.gray,fontWeight:700,marginBottom:6,display:"block"};
@@ -129,29 +122,15 @@ function ModalAdicionarBet({onSave, onClose, apostaDados}) {
         <div style={{fontSize:".7rem",color:C.gray,marginBottom:20}}>
           {isEdit ? "Edite os dados da aposta abaixo" : "Preencha os dados da aposta manualmente"}
         </div>
-
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
           <div><label style={lbl}>Tipo</label><select style={sel} value={tipo} onChange={e=>setTipo(e.target.value)}>{TIPOS.map(t=><option key={t}>{t}</option>)}</select></div>
           <div><label style={lbl}>Casa de Aposta</label><select style={sel} value={casa} onChange={e=>setCasa(e.target.value)}>{CASAS.map(c=><option key={c}>{c}</option>)}</select></div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:status==="Cashout"?8:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
           <div><label style={lbl}>Valor (R$)</label><input style={inp} type="number" placeholder="500" value={valor} onChange={e=>setValor(e.target.value)}/></div>
-          <div><label style={lbl}>Status</label><select style={sel} value={status} onChange={e=>{setStatus(e.target.value);if(e.target.value!=="Cashout")setCsvVal("");}}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></div>
+          <div><label style={lbl}>Status</label><select style={sel} value={status} onChange={e=>setStatus(e.target.value)}>{STATUSES.map(s=><option key={s}>{s}</option>)}</select></div>
           <div><label style={lbl}>Data</label><input style={{...inp,colorScheme:"dark"}} type="date" value={dataISO} onChange={e=>setDataISO(e.target.value)}/></div>
         </div>
-        {status==="Cashout" && (
-          <div style={{background:"rgba(251,146,60,.06)",border:"1px solid rgba(251,146,60,.25)",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
-            <label style={{...lbl,color:C.cashout,marginBottom:6}}>Valor recebido no Cashout (R$)</label>
-            <input style={{...inp,border:"1px solid rgba(251,146,60,.35)"}} type="number" step="0.01" placeholder="Ex: 650.00" value={csvVal} onChange={e=>setCsvVal(e.target.value)}/>
-            {csvVal && valor && !isNaN(Number(csvVal)) && !isNaN(Number(valor)) && (
-              <div style={{fontSize:".62rem",color:C.gray,marginTop:6}}>
-                Resultado: <b style={{color:(Number(csvVal)-Number(valor))>=0?C.green:C.red}}>{frf(Number(csvVal)-Number(valor))}</b>
-                <span style={{marginLeft:8,color:(Number(csvVal)-Number(valor))>=0?C.green:C.red}}>({(((Number(csvVal)-Number(valor))/Number(valor))*100).toFixed(1)}%)</span>
-              </div>
-            )}
-          </div>
-        )}
-
         <div style={{marginBottom:14}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <label style={{...lbl,marginBottom:0}}>Seleções</label>
@@ -165,9 +144,7 @@ function ModalAdicionarBet({onSave, onClose, apostaDados}) {
             </div>
           ))}
         </div>
-
         {erro && <div style={{fontSize:".74rem",color:C.red,marginBottom:12,padding:"8px 12px",background:"rgba(248,113,113,.08)",borderRadius:8,border:"1px solid rgba(248,113,113,.2)"}}>{erro}</div>}
-
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
           <button onClick={onClose} style={{padding:11,borderRadius:9,fontSize:".75rem",cursor:"pointer",background:"transparent",color:C.gray,border:`1px solid ${C.border}`}}>Cancelar</button>
           <button onClick={salvar} style={{padding:11,borderRadius:9,fontSize:".75rem",fontWeight:700,cursor:"pointer",background:C.green,color:"#060a07",border:"none",boxShadow:"0 4px 16px rgba(74,222,128,.25)"}}>
@@ -223,126 +200,207 @@ const EyeIcon = ({oculto, onClick}) => (
   </button>
 );
 
+// ── APP ──────────────────────────────────────────────────────
 export default function App() {
   const INITIAL_BETS = [
+    // ── BET NACIONAL ──
     { id:"BET-001", data:"05/02/2026", tipo:"Dupla", casa:"Bet Nacional", valor:900, status:"Em Aberto",
       sels:[{nome:"Shamrock Rovers - Vencedor Premier Division",odd:2.25},{nome:"Cruzeiro - Terminar no Top 4 Brasileirão",odd:1.83}] },
-    { id:"BET-002", data:"24/04/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Red",
-      sels:[{nome:"Millwall FC - Resultado Final",odd:1.80}] },
-    { id:"BET-003", data:"03/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Green",
-      sels:[{nome:"Mais de 3.5 Escanteios 1T - Club América x UNAM Pumas",odd:1.57}] },
-    { id:"BET-004", data:"03/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Cashout", csv:445.68,
-      sels:[{nome:"Mais de 3.5 Escanteios 1T - Mirassol x Corinthians",odd:1.72}] },
-    { id:"BET-005", data:"04/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Green",
-      sels:[{nome:"Mais de 7.5 Escanteios 1T - NK Istra x NK Slaven Belupo",odd:1.70}] },
-    { id:"BET-006", data:"04/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Red",
-      sels:[{nome:"Mais de 4.5 Escanteios 1T - Los Chankas CYC x Deportivo Garcilaso",odd:1.72}] },
-    { id:"BET-007", data:"04/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Red",
-      sels:[{nome:"Mais de 13.5 Escanteios - FK Bodo/Glimt x Molde FK",odd:1.60}] },
-    { id:"BET-008", data:"08/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Cashout", csv:225.15,
-      sels:[{nome:"Mais de 19.5 Escanteios - Lech Poznan x Arka Gdynia",odd:1.60}] },
-    { id:"BET-009", data:"05/05/2026", tipo:"Dupla", casa:"Betano", valor:1250, status:"Red",
-      sels:[{nome:"Sevilha FC - Acabar nos últimos 3 (LaLiga)",odd:3.00},{nome:"Club Brugge KV - Vencedor Final (1A Pro League)",odd:1.60}] },
-    { id:"BET-010", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:595.82, status:"Em Aberto",
-      sels:[{nome:"Shamrock Rovers FC - Vencedor Final Premier Division 2026",odd:2.25},{nome:"Cruzeiro - Terminar no Top 4 (Brasileirão 2026)",odd:2.05}] },
-    { id:"BET-011", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1000, status:"Em Aberto",
-      sels:[{nome:"Palmeiras - Terminar no Top 4 (Brasileirão 2026)",odd:1.50},{nome:"Shamrock Rovers FC - Vencedor Final Premier Division 2026",odd:2.25}] },
-    { id:"BET-012", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:326.26, status:"Em Aberto",
-      sels:[{nome:"O Higgins - Terminar no Top 6 (Liga de Primera 2026)",odd:1.80},{nome:"Vitória - Terminar nos últimos 4 (Brasileirão 2026)",odd:2.90}] },
-    { id:"BET-013", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:864.35, status:"Em Aberto",
-      sels:[{nome:"Shamrock Rovers FC - Vencedor Final Premier Division 2026",odd:2.00},{nome:"Remo - Terminar nos últimos 4 (Brasileirão 2026)",odd:1.70}] },
-    { id:"BET-014", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1100, status:"Em Aberto",
-      sels:[{nome:"Philadelphia Phillies - Entrar nas eliminatórias MLB 2026",odd:1.40},{nome:"IFK Norrkoping - Vencedor Final Superettan 2026",odd:2.75}] },
-    { id:"BET-015", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1000, status:"Em Aberto",
-      sels:[{nome:"São Bernardo - Terminar no Top 6 (Série B 2026)",odd:2.90},{nome:"Independiente del Valle - Vencedor Final Liga Pro 2026",odd:1.75}] },
-    { id:"BET-016", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1464.60, status:"Em Aberto",
-      sels:[{nome:"Chapecoense - Última posição (Brasileirão 2026)",odd:1.40},{nome:"Independiente del Valle - Vencedor Final Liga Pro 2026",odd:1.90}] },
-    { id:"BET-017", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1500, status:"Em Aberto",
-      sels:[{nome:"Independiente del Valle - Vencedor Final Liga Pro 2026",odd:2.00},{nome:"IK Sirius - Vencedor Final Allsvenskan 2026",odd:1.85}] },
-    { id:"BET-018", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:510.97, status:"Em Aberto",
-      sels:[{nome:"Huachipato - Terminar no Top 6 (Liga de Primera 2026)",odd:2.15},{nome:"Independiente del Valle - Vencedor Final Liga Pro 2026",odd:2.00}] },
-    { id:"BET-019", data:"23/03/2026", tipo:"Dupla", casa:"Novibet", valor:1500, status:"Cashout", csv:6057.69,
-      sels:[{nome:"Lech Poznan - Vencedor Ekstraklasa 25/26",odd:2.75},{nome:"Liverpool - Top 5 Premier League 25/26",odd:1.50}] },
-    { id:"BET-020", data:"08/04/2026", tipo:"Simples", casa:"Novibet", valor:428.62, status:"Green",
-      sels:[{nome:"Lech Poznan - Competition Winner Ekstraklasa 25/26",odd:2.40}] },
-    { id:"BET-021", data:"25/03/2026", tipo:"Dupla", casa:"Novibet", valor:1500, status:"Cashout", csv:1988.67,
-      sels:[{nome:"Lech Poznan - Competition Winner Ekstraklasa 25/26",odd:2.75},{nome:"HB Koge - To be Relegated 1st Division 25/26",odd:0.52}] },
-    { id:"BET-022", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:1140, status:"Em Aberto",
-      sels:[{nome:"Shamrock Rovers - Vencedor Final Premier Division 2026",odd:2.05},{nome:"Remo PA - Despromovido Série A 2026",odd:1.70}] },
-    { id:"BET-023", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:1100, status:"Em Aberto",
-      sels:[{nome:"Londrina PR - Despromovido Série B 2026",odd:1.90},{nome:"Mjallby - Terminar no Top 3 Allsvenskan 2026",odd:2.35}] },
-    { id:"BET-024", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:2100, status:"Em Aberto",
-      sels:[{nome:"Shamrock Rovers - Vencedor Final Premier Division 2026",odd:1.65},{nome:"Mirassol SP - Despromovido Série A 2026",odd:1.85}] },
-    { id:"BET-025", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:2400, status:"Em Aberto",
-      sels:[{nome:"Independiente del Valle - Vencedor Final Serie A 2026",odd:1.80},{nome:"Londrina PR - Despromovido Série B 2026",odd:1.70}] },
-    { id:"BET-026", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:1131, status:"Cashout", csv:227.82,
-      sels:[{nome:"Jagiellonia Bialystok - Vencedor Ekstraklasa 25/26",odd:7.50}] },
-    { id:"BET-027", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:899, status:"Cashout", csv:181.08,
-      sels:[{nome:"Jagiellonia Bialystok - Vencedor Ekstraklasa 25/26",odd:7.50}] },
-    { id:"BET-028", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:893, status:"Cashout", csv:199.36,
-      sels:[{nome:"Gornik Zabrze - Vencedor Ekstraklasa 25/26",odd:9.50}] },
-    { id:"BET-029", data:"04/05/2026", tipo:"Simples", casa:"Superbet", valor:369, status:"Cashout", csv:369,
-      sels:[{nome:"Zaglebie Lubin - Vencedor Ekstraklasa 25/26",odd:18.00}] },
-    { id:"BET-030", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:710, status:"Cashout", csv:158.51,
-      sels:[{nome:"Gornik Zabrze - Vencedor Ekstraklasa 25/26",odd:9.50}] },
-    { id:"BET-031", data:"24/05/2026", tipo:"Simples", casa:"Superbet", valor:500, status:"Green",
-      sels:[{nome:"CRB AL - Resultado Final (vs Ponte Preta)",odd:2.22}] },
-    { id:"BET-032", data:"26/04/2026", tipo:"Simples", casa:"Superbet", valor:30, status:"Green",
-      sels:[{nome:"Real Sociedad - Resultado Final (vs Rayo Vallecano)",odd:2.55}] },
-    { id:"BET-033", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1000, status:"Em Aberto",
-      sels:[{nome:"Colo Colo - Vencedor Chile Primeira Divisão 2026",odd:2.25},{nome:"Mirassol - Rebaixado Série A 2026",odd:1.95}] },
-    { id:"BET-034", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:255, status:"Em Aberto",
-      sels:[{nome:"Colo Colo - Vencedor Chile Primeira Divisão 2026",odd:2.25},{nome:"Londrina - Rebaixado Série B 2026",odd:2.10}] },
-    { id:"BET-035", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1500, status:"Em Aberto",
-      sels:[{nome:"Ponte Preta - Rebaixado Série B 2026",odd:1.62},{nome:"São Paulo - Top 6 Série A 2026",odd:1.90}] },
-    { id:"BET-036", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1000, status:"Em Aberto",
-      sels:[{nome:"AS Roma - Resultado Final (vs Verona)",odd:1.38},{nome:"Ponte Preta - Rebaixado Série B 2026",odd:1.63}] },
-    { id:"BET-037", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1364, status:"Em Aberto",
-      sels:[{nome:"Goiás - Top 6 Série B 2026",odd:2.15},{nome:"Palmeiras - Vencedor Série A 2026",odd:1.74}] },
-    { id:"BET-038", data:"30/05/2026", tipo:"Dupla", casa:"MC Games", valor:1500, status:"Em Aberto",
-      sels:[{nome:"Independiente del Valle - Vencedor Liga Pro Serie A 2026",odd:2.00},{nome:"Huachipato - Top 6 Liga de Primera 2026",odd:2.15}] },
-    { id:"BET-039", data:"20/10/2025", tipo:"Dupla", casa:"Bet Nacional", valor:1465, status:"Green",
-      sels:[{nome:"RB Leipzig - Vencedor",odd:2.00},{nome:"Pisa SC - Vencedor",odd:1.90}] },
-    { id:"BET-040", data:"23/08/2025", tipo:"Dupla", casa:"Bet Nacional", valor:800, status:"Red",
+    { id:"BET-002", data:"23/08/2025", tipo:"Dupla", casa:"Bet Nacional", valor:800, status:"Red",
       sels:[{nome:"Chapecoense SC - Vencedor",odd:2.85},{nome:"FC Basel 1893 - Vencedor",odd:1.94}] },
-    { id:"BET-041", data:"15/12/2025", tipo:"Dupla", casa:"Bet Nacional", valor:1000, status:"Red",
-      sels:[{nome:"Rochdale FC - Vencedor",odd:2.75},{nome:"Pisa SC - Vencedor",odd:1.50}] },
-    { id:"BET-042", data:"04/12/2025", tipo:"Dupla", casa:"Bet Nacional", valor:2500, status:"Red",
-      sels:[{nome:"Levante - Vencedor",odd:1.61},{nome:"Bayer Leverkusen - Vencedor",odd:1.73}] },
-    { id:"BET-043", data:"28/01/2026", tipo:"Dupla", casa:"Bet Nacional", valor:2051.30, status:"Red",
-      sels:[{nome:"Levante - Vencedor",odd:1.61},{nome:"Rochdale FC - Vencedor",odd:2.15}] },
-    { id:"BET-044", data:"15/12/2025", tipo:"Dupla", casa:"Bet Nacional", valor:1000, status:"Red",
+    { id:"BET-003", data:"15/12/2025", tipo:"Dupla", casa:"Bet Nacional", valor:1000, status:"Red",
       sels:[{nome:"FC Salzburgo - Vencedor",odd:2.20},{nome:"Bayer Leverkusen - Vencedor",odd:1.89}] },
-    { id:"BET-045", data:"05/04/2026", tipo:"Simples", casa:"Bet Nacional", valor:3391, status:"Green",
-      sels:[{nome:"Lech Poznań - Vencedor",odd:2.85}] },
-    { id:"BET-046", data:"05/04/2026", tipo:"Simples", casa:"Bet Nacional", valor:2976, status:"Green",
-      sels:[{nome:"Lech Poznań - Vencedor",odd:2.85}] },
+    { id:"BET-004", data:"15/12/2025", tipo:"Dupla", casa:"Bet Nacional", valor:1000, status:"Red",
+      sels:[{nome:"Rochdale FC - Vencedor",odd:2.75},{nome:"Pisa SC - Vencedor",odd:1.50}] },
+    { id:"BET-005", data:"04/12/2025", tipo:"Dupla", casa:"Bet Nacional", valor:2500, status:"Red",
+      sels:[{nome:"Levante - Vencedor",odd:1.61},{nome:"Bayer Leverkusen - Vencedor",odd:1.73}] },
+    { id:"BET-006", data:"20/10/2025", tipo:"Dupla", casa:"Bet Nacional", valor:1465, status:"Green",
+      sels:[{nome:"RB Leipzig - Vencedor",odd:2.00},{nome:"Pisa SC - Vencedor",odd:1.90}] },
+    { id:"BET-007", data:"28/01/2026", tipo:"Dupla", casa:"Bet Nacional", valor:2051.30, status:"Red",
+      sels:[{nome:"Levante - Vencedor",odd:1.61},{nome:"Rochdale FC - Vencedor",odd:2.15}] },
+    { id:"BET-008", data:"05/04/2026", tipo:"Simples", casa:"Bet Nacional", valor:3391, status:"Green",
+      sels:[{nome:"Lech Poznań - Vencedor Ekstraklasa 25/26",odd:2.85}] },
+    { id:"BET-009", data:"05/04/2026", tipo:"Simples", casa:"Bet Nacional", valor:2976, status:"Green",
+      sels:[{nome:"Lech Poznań - Vencedor Ekstraklasa 25/26",odd:2.85}] },
+
+    // ── BETANO — encerradas ──
+    { id:"BET-010", data:"24/04/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Red",
+      sels:[{nome:"Millwall FC - Resultado Final (vs Leicester)",odd:1.80}] },
+    { id:"BET-011", data:"03/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Green",
+      sels:[{nome:"Mais de 3.5 Escanteios 1T - Club América x UNAM Pumas",odd:1.57}] },
+    { id:"BET-012", data:"03/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Cashout", csv:445.68,
+      sels:[{nome:"Mais de 3.5 Escanteios 1T - Mirassol x Corinthians",odd:1.72}] },
+    { id:"BET-013", data:"04/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Green",
+      sels:[{nome:"Mais de 7.5 Escanteios 1T - NK Istra x NK Slaven Belupo Koprivnica",odd:1.70}] },
+    { id:"BET-014", data:"04/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Red",
+      sels:[{nome:"Mais de 4.5 Escanteios 1T - Los Chankas CYC x Deportivo Garcilaso",odd:1.72}] },
+    { id:"BET-015", data:"04/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Red",
+      sels:[{nome:"Mais de 13.5 Escanteios - FK Bodo/Glimt x Molde FK",odd:1.60}] },
+    { id:"BET-016", data:"08/05/2026", tipo:"Simples", casa:"Betano", valor:600, status:"Cashout", csv:225.15,
+      sels:[{nome:"Mais de 19.5 Escanteios - Lech Poznan x Arka Gdynia",odd:1.60}] },
+    { id:"BET-017", data:"05/05/2026", tipo:"Dupla", casa:"Betano", valor:1250, status:"Red",
+      sels:[{nome:"Sevilha FC - Acabar nos últimos 3 LaLiga 25/26",odd:3.00},{nome:"Club Brugge KV - Vencedor Final 1A Pro League",odd:1.60}] },
+
+    // ── BETANO — em aberto ──
+    { id:"BET-018", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:595.82, status:"Em Aberto",
+      sels:[{nome:"Shamrock Rovers FC - Vencedor Premier Division 2026",odd:2.25},{nome:"Cruzeiro - Top 4 Brasileirão 2026",odd:2.05}] },
+    { id:"BET-019", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1000, status:"Em Aberto",
+      sels:[{nome:"Palmeiras - Top 4 Brasileirão 2026",odd:1.50},{nome:"Shamrock Rovers FC - Vencedor Premier Division 2026",odd:2.25}] },
+    { id:"BET-020", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:326.26, status:"Em Aberto",
+      sels:[{nome:"O Higgins - Top 6 Liga de Primera 2026",odd:1.80},{nome:"Vitória - Últimos 4 Brasileirão 2026",odd:2.90}] },
+    { id:"BET-021", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:864.35, status:"Em Aberto",
+      sels:[{nome:"Shamrock Rovers FC - Vencedor Premier Division 2026",odd:2.00},{nome:"Remo - Últimos 4 Brasileirão 2026",odd:1.70}] },
+    { id:"BET-022", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1100, status:"Em Aberto",
+      sels:[{nome:"Philadelphia Phillies - Eliminatórias MLB 2026",odd:1.40},{nome:"IFK Norrkoping - Vencedor Superettan 2026",odd:2.75}] },
+    { id:"BET-023", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1000, status:"Em Aberto",
+      sels:[{nome:"São Bernardo - Top 6 Série B 2026",odd:2.90},{nome:"Independiente del Valle - Vencedor Liga Pro 2026",odd:1.75}] },
+    { id:"BET-024", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1464.60, status:"Em Aberto",
+      sels:[{nome:"Chapecoense - Última posição Brasileirão 2026",odd:1.40},{nome:"Independiente del Valle - Vencedor Liga Pro 2026",odd:1.90}] },
+    { id:"BET-025", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:1500, status:"Em Aberto",
+      sels:[{nome:"Independiente del Valle - Vencedor Liga Pro 2026",odd:2.00},{nome:"IK Sirius - Vencedor Allsvenskan 2026",odd:1.85}] },
+    { id:"BET-026", data:"30/05/2026", tipo:"Dupla", casa:"Betano", valor:510.97, status:"Em Aberto",
+      sels:[{nome:"Huachipato - Top 6 Liga de Primera 2026",odd:2.15},{nome:"Independiente del Valle - Vencedor Liga Pro 2026",odd:2.00}] },
+
+    // ── NOVIBET — encerradas ──
+    { id:"BET-027", data:"23/03/2026", tipo:"Dupla", casa:"Novibet", valor:1500, status:"Cashout", csv:6057.69,
+      sels:[{nome:"Lech Poznan - Vencedor Ekstraklasa 25/26",odd:2.75},{nome:"Liverpool - Top 5 Premier League 25/26",odd:1.50}] },
+    { id:"BET-028", data:"08/04/2026", tipo:"Simples", casa:"Novibet", valor:428.62, status:"Green",
+      sels:[{nome:"Lech Poznan - Vencedor Ekstraklasa 25/26",odd:2.40}] },
+    { id:"BET-029", data:"25/03/2026", tipo:"Dupla", casa:"Novibet", valor:1500, status:"Cashout", csv:1988.67,
+      sels:[{nome:"Lech Poznan - Vencedor Ekstraklasa 25/26",odd:2.75},{nome:"HB Koge - Rebaixado 1st Division 25/26",odd:0.52}] },
+
+    // ── NOVIBET — em aberto ──
+    { id:"BET-030", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:1140, status:"Em Aberto",
+      sels:[{nome:"Shamrock Rovers - Vencedor Premier Division 2026",odd:2.05},{nome:"Remo PA - Despromovido Série A 2026",odd:1.70}] },
+    { id:"BET-031", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:1100, status:"Em Aberto",
+      sels:[{nome:"Londrina PR - Despromovido Série B 2026",odd:1.90},{nome:"Mjallby - Top 3 Allsvenskan 2026",odd:2.35}] },
+    { id:"BET-032", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:2100, status:"Em Aberto",
+      sels:[{nome:"Shamrock Rovers - Vencedor Premier Division 2026",odd:1.65},{nome:"Mirassol SP - Despromovido Série A 2026",odd:1.85}] },
+    { id:"BET-033", data:"30/05/2026", tipo:"Dupla", casa:"Novibet", valor:2400, status:"Em Aberto",
+      sels:[{nome:"Independiente del Valle - Vencedor Serie A 2026",odd:1.80},{nome:"Londrina PR - Despromovido Série B 2026",odd:1.70}] },
+
+    // ── SUPERBET — encerradas ──
+    { id:"BET-034", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:1131, status:"Cashout", csv:227.82,
+      sels:[{nome:"Jagiellonia Bialystok - Vencedor Ekstraklasa 25/26",odd:7.50}] },
+    { id:"BET-035", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:899, status:"Cashout", csv:181.08,
+      sels:[{nome:"Jagiellonia Bialystok - Vencedor Ekstraklasa 25/26",odd:7.50}] },
+    { id:"BET-036", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:893, status:"Cashout", csv:199.36,
+      sels:[{nome:"Gornik Zabrze - Vencedor Ekstraklasa 25/26",odd:9.50}] },
+    { id:"BET-037", data:"04/05/2026", tipo:"Simples", casa:"Superbet", valor:369, status:"Cashout", csv:369,
+      sels:[{nome:"Zaglebie Lubin - Vencedor Ekstraklasa 25/26",odd:18.00}] },
+    { id:"BET-038", data:"17/05/2026", tipo:"Simples", casa:"Superbet", valor:710, status:"Cashout", csv:158.51,
+      sels:[{nome:"Gornik Zabrze - Vencedor Ekstraklasa 25/26",odd:9.50}] },
+    { id:"BET-039", data:"26/04/2026", tipo:"Simples", casa:"Superbet", valor:30, status:"Green",
+      sels:[{nome:"Real Sociedad - Resultado Final vence (vs Rayo Vallecano)",odd:2.55}] },
+    { id:"BET-040", data:"24/05/2026", tipo:"Simples", casa:"Superbet", valor:500, status:"Green",
+      sels:[{nome:"CRB AL - Resultado Final vence (vs Ponte Preta)",odd:2.22}] },
+
+    // ── SUPERBET — em aberto ──
+    { id:"BET-041", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1000, status:"Em Aberto",
+      sels:[{nome:"Colo Colo - Vencedor Chile Primeira Divisão 2026",odd:2.25},{nome:"Mirassol - Rebaixado Série A 2026",odd:1.95}] },
+    { id:"BET-042", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:255, status:"Em Aberto",
+      sels:[{nome:"Colo Colo - Vencedor Chile Primeira Divisão 2026",odd:2.25},{nome:"Londrina - Rebaixado Série B 2026",odd:2.10}] },
+    { id:"BET-043", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1500, status:"Em Aberto",
+      sels:[{nome:"Ponte Preta - Rebaixado Série B 2026",odd:1.62},{nome:"São Paulo - Top 6 Série A 2026",odd:1.90}] },
+    { id:"BET-044", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1000, status:"Em Aberto",
+      sels:[{nome:"AS Roma - Vence (vs Verona)",odd:1.38},{nome:"Ponte Preta - Rebaixado Série B 2026",odd:1.63}] },
+    { id:"BET-045", data:"30/05/2026", tipo:"Dupla", casa:"Superbet", valor:1364, status:"Em Aberto",
+      sels:[{nome:"Goiás - Top 6 Série B 2026",odd:2.15},{nome:"Palmeiras - Vencedor Série A 2026",odd:1.74}] },
+
+    // ── MC GAMES ──
+    { id:"BET-046", data:"30/05/2026", tipo:"Dupla", casa:"MC Games", valor:1500, status:"Em Aberto",
+      sels:[{nome:"Independiente del Valle - Vencedor Liga Pro Serie A 2026",odd:2.00},{nome:"Huachipato - Top 6 Liga de Primera 2026",odd:2.15}] },
   ];
 
-  const [apostas, setApostas] = useState(() => INITIAL_BETS);
-  const [tab,setTab]           = useState("dashboard");
-  const [filtro,setFiltro]     = useState("todos");
-  const [filtroCasas,setFiltroCasas] = useState(new Set());
-  const [busca,setBusca]       = useState("");
-  const [modal,setModal]       = useState(null);
-  const [showAdd,setShowAdd]   = useState(false);
-  const [showEdit,setShowEdit] = useState(false);
+  const [apostas, setApostas] = useState(INITIAL_BETS);
+  const [storageReady, setStorageReady] = useState(false);
+  const [tab,setTab]               = useState("dashboard");
+  const [filtro,setFiltro]         = useState("todos");
+  const [filtroCasa,setFiltroCasa] = useState("todas");
+  const [busca,setBusca]           = useState("");
+  const [modal,setModal]           = useState(null);
+  const [showAdd,setShowAdd]       = useState(false);
+  const [showEdit,setShowEdit]     = useState(false);
   const [confirmDelete,setConfirmDelete] = useState(false);
   const [ocultarNum,setOcultarNum] = useState(false);
   const mV = v => ocultarNum ? "—" : v;
-  const [aiMode,setAiMode]     = useState("chat");
-  const [chatTxt,setChatTxt]   = useState("");
-  const [imgB64,setImgB64]     = useState(null);
-  const [imgUrl,setImgUrl]     = useState(null);
-  const [loading,setLoading]   = useState(false);
-  const [aiRes,setAiRes]       = useState(null);
-  const [toast,setToast]       = useState(null);
-  const [drag,setDrag]         = useState(false);
+  const [aiMode,setAiMode]   = useState("chat");
+  const [chatTxt,setChatTxt] = useState("");
+  const [imgB64,setImgB64]   = useState(null);
+  const [imgUrl,setImgUrl]   = useState(null);
+  const [loading,setLoading] = useState(false);
+  const [aiRes,setAiRes]     = useState(null);
+  const [toast,setToast]     = useState(null);
+  const [drag,setDrag]       = useState(false);
+  const [cashoutInput,setCashoutInput]   = useState({});
+  const [showCashoutField,setShowCashoutField] = useState(false);
 
-  useEffect(() => { try { localStorage.setItem("apostas_amigo_v1", JSON.stringify(apostas)); } catch(e) {} }, [apostas]);
+  // ── STORAGE (IndexedDB + localStorage fallback) ─────────────
+  const DB_NAME = "apostas_db";
+  const DB_STORE = "apostas";
+  const DB_KEY = "apostas_v1";
+
+  const openDB = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(DB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  const idbSave = async (data) => {
+    try {
+      const db = await openDB();
+      const tx = db.transaction(DB_STORE, "readwrite");
+      tx.objectStore(DB_STORE).put(data, DB_KEY);
+      await new Promise((res,rej) => { tx.oncomplete=res; tx.onerror=rej; });
+      db.close();
+    } catch(e) {}
+    // também salva no localStorage como backup
+    try { localStorage.setItem("apostas_amigo_v1", JSON.stringify(data)); } catch(e) {}
+  };
+
+  const idbLoad = async () => {
+    try {
+      const db = await openDB();
+      const tx = db.transaction(DB_STORE, "readonly");
+      const req = tx.objectStore(DB_STORE).get(DB_KEY);
+      const result = await new Promise((res,rej) => { req.onsuccess=()=>res(req.result); req.onerror=rej; });
+      db.close();
+      if (result) return result;
+    } catch(e) {}
+    // fallback localStorage
+    try { const r=localStorage.getItem("apostas_amigo_v1"); if(r) return JSON.parse(r); } catch(e) {}
+    return null;
+  };
+
+  // Carrega dados na inicialização
+  useEffect(() => {
+    idbLoad().then(data => {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setApostas(data);
+      }
+      setStorageReady(true);
+    });
+  }, []);
+
+  // Salva sempre que apostas mudar (mas só após storage estar pronto)
+  useEffect(() => {
+    if (!storageReady) return;
+    idbSave(apostas);
+  }, [apostas, storageReady]);
 
   const showToast = useCallback((msg,tipo="ok") => { setToast({msg,tipo}); setTimeout(()=>setToast(null),2800); }, []);
 
+  useEffect(() => {
+    if (modal?.id) {
+      const ap = apostas.find(a=>a.id===modal.id);
+      if(ap) setCashoutInput(prev=>({...prev,[modal.id]:ap.csv!=null?ap.csv:ap.valor}));
+    }
+    setShowCashoutField(false);
+    setConfirmDelete(false);
+  }, [modal?.id]);
+
+  // ── STATS ──
   const st = (() => {
     const enc=apostas.filter(a=>a.status!=="Em Aberto");
     const ab=apostas.filter(a=>a.status==="Em Aberto");
@@ -354,127 +412,78 @@ export default function App() {
     const pot=ab.reduce((s,a)=>s+ret(a),0);
     const ei=enc.reduce((s,a)=>s+a.valor,0);
     const roi=ei?lt/ei:0;
-    // Taxa de acerto: Green=acerto. Cashout>+20%=acerto. Cashout entre -20% e +20%=neutro. Red=erro.
-    const acBets = enc.filter(a => {
-      if (a.status === "Green") return true;
-      if (a.status === "Red") return false;
-      if (a.status === "Cashout") return ((a.csv||0) - a.valor) / a.valor > 0.20;
-      return false;
-    });
-    const acTotal = enc.filter(a => {
-      if (a.status === "Green" || a.status === "Red") return true;
-      if (a.status === "Cashout") return Math.abs(((a.csv||0) - a.valor) / a.valor) > 0.20;
-      return false;
-    });
-    const ac = acTotal.length ? acBets.length / acTotal.length : 0;
-    const acNum = acBets.length;
-    const acDen = acTotal.length;
-
+    const ac=enc.length?gr.length/enc.length:0;
     const mb=apostas.length?apostas.reduce((b,a)=>ot(a)>ot(b)?a:b,apostas[0]):{sels:[{odd:0}],id:""};
     const cm={};
     apostas.forEach(a=>{ if(!cm[a.casa])cm[a.casa]={t:0,c:0,g:0}; cm[a.casa].t+=a.valor; cm[a.casa].c++; if(a.status==="Green")cm[a.casa].g++; });
-    return {enc,ab,gr,rd,co,ti,lt,pot,ei,roi,ac,acNum,acDen,mb,cm};
+    return {enc,ab,gr,rd,co,ti,lt,pot,ei,roi,ac,mb,cm};
   })();
 
   const powerRanking = () => {
     const map={};
-    apostas.forEach(a => {
-      a.sels.forEach(s => {
-        if (!map[s.nome]) map[s.nome]={nome:s.nome,stake:0,apostas:0};
-        map[s.nome].stake+=a.valor; map[s.nome].apostas++;
-      });
-    });
+    apostas.forEach(a=>a.sels.forEach(s=>{ if(!map[s.nome])map[s.nome]={nome:s.nome,stake:0,apostas:0}; map[s.nome].stake+=a.valor; map[s.nome].apostas++; }));
     return Object.values(map).sort((a,b)=>b.stake-a.stake).slice(0,15).map((r,i)=>({...r,pos:i+1}));
   };
 
   const chartData = () => {
     const cm={};
-    apostas.forEach(a => {
-      if (!cm[a.casa]) cm[a.casa]={casa:a.casa,investido:0,lucro:0};
-      cm[a.casa].investido+=a.valor;
-      const l=luc(a); if(l!=null) cm[a.casa].lucro+=l;
-    });
+    apostas.forEach(a=>{ if(!cm[a.casa])cm[a.casa]={casa:a.casa,investido:0,lucro:0}; cm[a.casa].investido+=a.valor; const l=luc(a); if(l!=null)cm[a.casa].lucro+=l; });
     return Object.values(cm).sort((a,b)=>b.investido-a.investido);
   };
 
   const lucroLineData = () => {
-    const enc = apostas.filter(a=>a.status!=="Em Aberto" && parseData(a.data));
+    const enc=apostas.filter(a=>a.status!=="Em Aberto"&&parseData(a.data));
     enc.sort((a,b)=>parseData(a.data)-parseData(b.data));
     let acum=0;
-    const pts = enc.map(a=>{ acum+=(luc(a)||0); return {data:a.data,lucro:parseFloat(acum.toFixed(2)),id:a.id}; });
-    const todayStr = hoje();
-    if(pts.length && pts[pts.length-1].data!==todayStr){
-      pts.push({data:todayStr,lucro:pts[pts.length-1].lucro,id:"hoje"});
-    }
+    const pts=enc.map(a=>{ acum+=(luc(a)||0); return {data:a.data,lucro:parseFloat(acum.toFixed(2)),id:a.id}; });
+    const todayStr=hoje();
+    if(pts.length&&pts[pts.length-1].data!==todayStr) pts.push({data:todayStr,lucro:pts[pts.length-1].lucro,id:"hoje"});
     return pts;
   };
 
   const medalha = pos => pos===1?"🥇":pos===2?"🥈":pos===3?"🥉":`${pos}º`;
 
-  const [cashoutInput, setCashoutInput] = useState({});
-  const [showCashoutField, setShowCashoutField] = useState(false);
-
-  useEffect(() => {
-    if (modal?.id && apostas.find(a=>a.id===modal.id)) {
-      const aposta = apostas.find(a=>a.id===modal.id);
-      setCashoutInput(prev => ({...prev, [modal.id]: aposta.csv != null ? aposta.csv : aposta.valor}));
-    }
-    setShowCashoutField(false);
-    setConfirmDelete(false);
-  }, [modal?.id]);
-
-  const setStatus = (s, csvVal) => {
-    setApostas(p=>p.map(a=>a.id===modal.id ? {...a, status:s, ...(s==="Cashout" ? {csv: csvVal ?? a.valor} : {})} : a));
-    showToast(`${modal.id} → ${s}`, s==="Green"||s==="Cashout"?"ok":"err");
-    setModal(null);
-    setShowCashoutField(false);
+  // ── AÇÕES ──
+  const setStatus = (s,csvVal) => {
+    setApostas(p=>p.map(a=>a.id===modal.id?{...a,status:s,...(s==="Cashout"?{csv:csvVal??a.valor}:{})}:a));
+    showToast(`${modal.id} → ${s}`,s==="Green"||s==="Cashout"?"ok":"err");
+    setModal(null); setShowCashoutField(false);
   };
-  const deleteAposta = () => {
-    setApostas(p=>p.filter(a=>a.id!==modal.id));
-    showToast("Aposta excluída","err");
-    setModal(null);
-    setConfirmDelete(false);
-  };
+  const deleteAposta = () => { setApostas(p=>p.filter(a=>a.id!==modal.id)); showToast("Aposta excluída","err"); setModal(null); setConfirmDelete(false); };
   const adicionarBet = dados => { const nova={id:nid(apostas),data:dados.data||hoje(),...dados}; setApostas(p=>[...p,nova]); setShowAdd(false); showToast(`${nova.id} adicionada!`,"ok"); };
-  const editarBet = dados => {
-    setApostas(p=>p.map(a=>a.id===modal.id ? {...a,...dados} : a));
-    setShowEdit(false);
-    setModal(null);
-    showToast(`${modal.id} atualizada!`,"ok");
-  };
+  const editarBet = dados => { setApostas(p=>p.map(a=>a.id===modal.id?{...a,...dados}:a)); setShowEdit(false); setModal(null); showToast(`${modal.id} atualizada!`,"ok"); };
 
+  // ── IA ──
   const processResult = r => {
     let added=0,updated=0,errs=[];
     const novo=[...apostas];
-    (r.novas||[]).forEach(n => { if(!n.sels?.length)return; novo.push({id:nid(novo),data:hoje(),tipo:n.tipo||"Simples",sels:n.sels.map(s=>({nome:s.nome||"?",odd:parseFloat(s.odd)||1})),casa:n.casa||"?",valor:parseFloat(n.valor)||0,status:"Em Aberto"}); added++; });
-    (r.atualizacoes||[]).forEach(u => { const i=novo.findIndex(x=>x.id===u.id); if(i>=0){novo[i]={...novo[i],status:u.status};updated++;}else errs.push(u.id); });
+    (r.novas||[]).forEach(n=>{ if(!n.sels?.length)return; novo.push({id:nid(novo),data:hoje(),tipo:n.tipo||"Simples",sels:n.sels.map(s=>({nome:s.nome||"?",odd:parseFloat(s.odd)||1})),casa:n.casa||"?",valor:parseFloat(n.valor)||0,status:"Em Aberto"}); added++; });
+    (r.atualizacoes||[]).forEach(u=>{ const i=novo.findIndex(x=>x.id===u.id); if(i>=0){novo[i]={...novo[i],status:u.status};updated++;}else errs.push(u.id); });
     setApostas(novo);
     const msgs=[];
-    if(added)  msgs.push(`✅ ${added} aposta${added>1?"s":""} adicionada${added>1?"s":""}`);
+    if(added)   msgs.push(`✅ ${added} aposta${added>1?"s":""} adicionada${added>1?"s":""}`);
     if(updated) msgs.push(`🔄 ${updated} status atualizado${updated>1?"s":""}`);
     if(errs.length) msgs.push(`⚠️ IDs não encontrados: ${errs.join(", ")}`);
     setAiRes({tipo:"ok",msg:msgs.join("\n")||"✅ Processado!"});
     showToast(added?`${added} adicionada${added>1?"s":""}!`:updated?`${updated} atualizado${updated>1?"s":""}!`:"OK!");
   };
-
   const callAI = async msgs => {
-    const resp = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:SYSTEM_PROMPT,messages:msgs})});
-    const data = await resp.json();
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:SYSTEM_PROMPT,messages:msgs})});
+    const data=await resp.json();
     if(data.error) throw new Error(data.error.message);
-    const txt = (data.content||[]).map(c=>c.text||"").join("").trim();
-    const m = txt.match(/\{[\s\S]*\}/);
+    const txt=(data.content||[]).map(c=>c.text||"").join("").trim();
+    const m=txt.match(/\{[\s\S]*\}/);
     if(!m) throw new Error("IA não retornou JSON válido.");
     return JSON.parse(m[0]);
   };
-
   const sendChat = async () => { if(!chatTxt.trim())return; setLoading(true);setAiRes(null); try{const r=await callAI([{role:"user",content:chatTxt}]); if(r.acao==="nada")setAiRes({tipo:"ok",msg:"ℹ️ "+(r.resumo||"Nada encontrado.")}); else processResult(r);}catch(e){setAiRes({tipo:"err",msg:"❌ "+e.message});} setLoading(false); };
   const sendImg  = async () => { if(!imgB64){showToast("Seleciona uma imagem primeiro","err");return;} setLoading(true);setAiRes(null); try{const r=await callAI([{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:imgB64}},{type:"text",text:"Extraia todas as apostas desta imagem."}]}]); if(r.acao==="nada")setAiRes({tipo:"ok",msg:"ℹ️ "+(r.resumo||"Nada encontrado.")}); else processResult(r);}catch(e){setAiRes({tipo:"err",msg:"❌ "+e.message});} setLoading(false); };
   const handleImg = e => { const f=e.target.files[0];if(!f)return; const reader=new FileReader(); reader.onload=ev=>{setImgB64(ev.target.result.split(",")[1]);setImgUrl(ev.target.result);}; reader.readAsDataURL(f); };
 
-  const casasUnicas = ["todas", ...Array.from(new Set(apostas.map(a=>a.casa))).sort()];
+  const casasUnicas = ["todas",...Array.from(new Set(apostas.map(a=>a.casa))).sort()];
   const listaFiltrada = [...apostas].reverse()
     .filter(a=>filtro==="todos"||a.status===filtro)
-    .filter(a=>filtroCasas.size===0||filtroCasas.has(a.casa))
+    .filter(a=>filtroCasa==="todas"||a.casa===filtroCasa)
     .filter(a=>!busca||a.id.toLowerCase().includes(busca)||a.sels.some(s=>s.nome.toLowerCase().includes(busca))||a.casa.toLowerCase().includes(busca));
   const modalAposta = modal?apostas.find(a=>a.id===modal.id):null;
 
@@ -495,6 +504,7 @@ export default function App() {
     <div style={{background:C.bg,minHeight:"100vh",fontFamily:"'DM Sans',system-ui,sans-serif",color:C.white,maxWidth:900,margin:"0 auto",padding:"0 14px 100px"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');*{box-sizing:border-box;margin:0;padding:0}textarea::placeholder,input::placeholder{color:${C.gray}}select option{background:${C.card2};color:${C.white}}input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.6)}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:${C.bg}}::-webkit-scrollbar-thumb{background:${C.border2};border-radius:99px}`}</style>
 
+      {/* ── HEADER ── */}
       <div style={{padding:"24px 0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${C.border}`,marginBottom:22}}>
         <div style={{display:"flex",alignItems:"baseline",gap:10}}>
           <h1 style={{fontFamily:"'Bebas Neue',Impact,sans-serif",fontSize:"2rem",letterSpacing:3,color:C.green,margin:0,textShadow:"0 0 30px rgba(74,222,128,0.25)"}}>⚽ APOSTAS</h1>
@@ -506,6 +516,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* ── TABS ── */}
       <div style={{display:"flex",gap:3,background:C.card,border:`1px solid ${C.border}`,borderRadius:99,padding:4,marginBottom:22,width:"fit-content"}}>
         {["dashboard","apostas","ia","stats"].map(t=>(
           <button key={t} onClick={()=>setTab(t)} style={{padding:"8px 18px",borderRadius:99,fontSize:".72rem",fontWeight:700,letterSpacing:.8,cursor:"pointer",color:tab===t?"#060a07":C.gray,border:"none",background:tab===t?C.green:"transparent",textTransform:"uppercase",boxShadow:tab===t?"0 2px 16px rgba(74,222,128,0.3)":"none"}}>
@@ -514,6 +525,7 @@ export default function App() {
         ))}
       </div>
 
+      {/* ── DASHBOARD ── */}
       {tab==="dashboard" && (
         <div>
           {apostas.length===0 ? <EmptyState/> : <>
@@ -524,7 +536,7 @@ export default function App() {
                 [false,"Total Investido",mV(fr(st.ti)),"white",apostas.length+" apostas no total",false],
                 [false,"Ret. Potencial",mV(fr(st.pot)),"yellow","apostas em aberto",false],
                 [false,"ROI",mV((st.roi*100).toFixed(1)+"%"),st.roi>=0?"green":"red","encerradas",false],
-                [false,"Taxa Acerto",(st.ac*100).toFixed(0)+"%","white",st.acNum+"/"+st.acDen+" computadas",true],
+                [false,"Taxa Acerto",(st.ac*100).toFixed(0)+"%","white",st.gr.length+"/"+st.enc.length+" encerradas",true],
                 [false,"Melhor Odd",st.mb.sels?ot(st.mb).toFixed(2)+"x":"—","yellow",st.mb.id||"—",false],
               ].map(([hi,label,val,col,sub,bar],i)=>(
                 <div key={i} style={kpi(hi)}>
@@ -559,6 +571,7 @@ export default function App() {
         </div>
       )}
 
+      {/* ── APOSTAS ── */}
       {tab==="apostas" && (
         <div>
           <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap",alignItems:"center"}}>
@@ -569,11 +582,11 @@ export default function App() {
           </div>
           <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontSize:".6rem",textTransform:"uppercase",letterSpacing:2,color:C.gray,fontWeight:700,marginRight:2}}>Casa:</span>
-            <button onClick={()=>setFiltroCasas(new Set())} style={{padding:"4px 11px",borderRadius:99,fontSize:".65rem",fontWeight:700,cursor:"pointer",color:filtroCasas.size===0?"#060a07":C.gray,border:`1px solid ${filtroCasas.size===0?"rgba(251,191,36,.6)":C.border}`,background:filtroCasas.size===0?C.yellow:"transparent"}}>Todas</button>
-            {casasUnicas.filter(c=>c!=="todas").map(c=>{
-              const ativa=filtroCasas.has(c);
-              return <button key={c} onClick={()=>setFiltroCasas(prev=>{const n=new Set(prev);ativa?n.delete(c):n.add(c);return n;})} style={{padding:"4px 11px",borderRadius:99,fontSize:".65rem",fontWeight:700,cursor:"pointer",color:ativa?"#060a07":C.gray,border:`1px solid ${ativa?"rgba(251,191,36,.6)":C.border}`,background:ativa?C.yellow:"transparent"}}>{c}</button>;
-            })}
+            {casasUnicas.map(c=>(
+              <button key={c} onClick={()=>setFiltroCasa(c)} style={{padding:"4px 11px",borderRadius:99,fontSize:".65rem",fontWeight:700,cursor:"pointer",color:filtroCasa===c?"#060a07":C.gray,border:`1px solid ${filtroCasa===c?"rgba(251,191,36,.6)":C.border}`,background:filtroCasa===c?C.yellow:"transparent"}}>
+                {c==="todas"?"Todas":c}
+              </button>
+            ))}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
             {listaFiltrada.length ? listaFiltrada.map(a=><ApostaCard key={a.id} a={a} onClick={id=>setModal({id})}/>) : (
@@ -583,6 +596,7 @@ export default function App() {
         </div>
       )}
 
+      {/* ── IA ── */}
       {tab==="ia" && (
         <div>
           <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:20,marginBottom:20}}>
@@ -604,7 +618,7 @@ export default function App() {
               <button onClick={sendChat} disabled={loading} style={{width:"100%",padding:11,borderRadius:9,background:loading?"#2d6a4f":C.green,color:"#060a07",fontWeight:700,fontSize:".78rem",border:"none",cursor:loading?"not-allowed":"pointer",opacity:loading?0.7:1}}>{loading?"⏳ Processando...":"⚡ Processar com IA"}</button>
             </>}
             {aiMode==="img" && <>
-              <div onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);const f=e.dataTransfer.files[0];if(f){const i=document.createElement("input");i.files=e.dataTransfer.files;handleImg({target:i});}}} onClick={()=>document.getElementById("img-amigo").click()} style={{border:`2px dashed ${drag?"rgba(74,222,128,.5)":C.border}`,borderRadius:9,padding:"26px 20px",textAlign:"center",cursor:"pointer",marginBottom:10,background:drag?"rgba(74,222,128,0.06)":"transparent",position:"relative"}}>
+              <div onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);const f=e.dataTransfer.files[0];if(f){const i=document.createElement("input");i.files=e.dataTransfer.files;handleImg({target:i});}}} onClick={()=>document.getElementById("img-amigo").click()} style={{border:`2px dashed ${drag?"rgba(74,222,128,.5)":C.border}`,borderRadius:9,padding:"26px 20px",textAlign:"center",cursor:"pointer",marginBottom:10,background:drag?"rgba(74,222,128,0.06)":"transparent"}}>
                 <input id="img-amigo" type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
                 <div style={{fontSize:"1.6rem",marginBottom:4}}>📷</div>
                 <div style={{fontSize:".76rem",color:C.gray}}><b style={{color:C.white2}}>Clique ou arraste</b> o print aqui</div>
@@ -622,10 +636,9 @@ export default function App() {
         </div>
       )}
 
+      {/* ── STATS ── */}
       {tab==="stats" && (()=>{
-        const pr=powerRanking();
-        const cd=chartData();
-        const ld=lucroLineData();
+        const pr=powerRanking(); const cd=chartData(); const ld=lucroLineData();
         return apostas.length===0 ? <EmptyState/> : (
           <div>
             <SectionTitle>Evolução do Lucro Líquido</SectionTitle>
@@ -634,20 +647,11 @@ export default function App() {
               <ResponsiveContainer width="100%" height={230}>
                 <LineChart data={ld} margin={{top:8,right:8,left:0,bottom:4}}>
                   <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false}/>
-                  <XAxis dataKey="data" tick={{fill:C.gray,fontSize:9}} axisLine={false} tickLine={false}
-                    tickFormatter={v=>{ const pts=v.split("/"); return pts.length===3?`${pts[1]}/${pts[2]?.slice(2)}`:v; }}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis tick={{fill:C.gray,fontSize:9}} axisLine={false} tickLine={false}
-                    tickFormatter={v=>{ const a=Math.abs(v); return (v<0?"-":"")+(a>=1000?(a/1000).toFixed(0)+"k":a); }}
-                  />
+                  <XAxis dataKey="data" tick={{fill:C.gray,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>{ const p=v.split("/"); return p.length===3?`${p[1]}/${p[2]?.slice(2)}`:v; }} interval="preserveStartEnd"/>
+                  <YAxis tick={{fill:C.gray,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>{ const a=Math.abs(v); return (v<0?"-":"")+(a>=1000?(a/1000).toFixed(0)+"k":a); }}/>
                   <Tooltip content={<LineTooltip/>}/>
                   <ReferenceLine y={0} stroke={C.border2} strokeDasharray="4 2" strokeWidth={1.5}/>
-                  <Line type="monotone" dataKey="lucro" name="Lucro" stroke={C.green} strokeWidth={2.5}
-                    dot={{r:4,fill:C.bg,stroke:C.green,strokeWidth:2,cursor:"pointer"}}
-                    activeDot={{r:7,fill:C.green,stroke:C.card2,strokeWidth:2}}
-                    connectNulls
-                  />
+                  <Line type="monotone" dataKey="lucro" name="Lucro" stroke={C.green} strokeWidth={2.5} dot={{r:4,fill:C.bg,stroke:C.green,strokeWidth:2,cursor:"pointer"}} activeDot={{r:7,fill:C.green,stroke:C.card2,strokeWidth:2}} connectNulls/>
                 </LineChart>
               </ResponsiveContainer>
               {ld.length>0 && <div style={{display:"flex",justifyContent:"space-between",marginTop:10,padding:"8px 12px",background:C.bg2,borderRadius:8,border:`1px solid ${C.border}`}}>
@@ -655,7 +659,6 @@ export default function App() {
                 <span style={{fontSize:".62rem",color:C.gray}}>Lucro atual: <b style={{color:ld[ld.length-1]?.lucro>=0?C.green:C.red}}>{frf(ld[ld.length-1]?.lucro||0)}</b></span>
               </div>}
             </div>
-
             <SectionTitle>Investimento vs Lucro por Casa</SectionTitle>
             <div style={{...sBlock,marginBottom:14}}>
               <div style={{fontSize:".61rem",textTransform:"uppercase",letterSpacing:2,color:C.gray,fontWeight:700,marginBottom:16}}>📊 Comparativo por casa de aposta</div>
@@ -667,13 +670,10 @@ export default function App() {
                   <Tooltip content={<CustomTooltip/>}/>
                   <Legend wrapperStyle={{fontSize:".7rem",color:C.gray,paddingTop:8}}/>
                   <Bar dataKey="investido" name="Investido" fill={C.blue} opacity={0.8} radius={[4,4,0,0]}/>
-                  <Bar dataKey="lucro" name="Lucro/Prejuízo" radius={[4,4,0,0]}>
-                    {cd.map((d,i)=><Cell key={i} fill={d.lucro>=0?C.green:C.red} opacity={0.85}/>)}
-                  </Bar>
+                  <Bar dataKey="lucro" name="Lucro/Prejuízo" radius={[4,4,0,0]}>{cd.map((d,i)=><Cell key={i} fill={d.lucro>=0?C.green:C.red} opacity={0.85}/>)}</Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
-
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
               <div style={sBlock}>
                 <div style={{fontSize:".61rem",textTransform:"uppercase",letterSpacing:2,color:C.gray,fontWeight:700,marginBottom:14}}>📋 Por Tipo</div>
@@ -686,21 +686,18 @@ export default function App() {
                 ))}
               </div>
             </div>
-
             <div style={{...sBlock,marginBottom:14}}>
               <div style={{fontSize:".61rem",textTransform:"uppercase",letterSpacing:2,color:C.gray,fontWeight:700,marginBottom:14}}>📈 Performance Geral</div>
-              {[["Total apostas",apostas.length,""],["Encerradas",st.enc.length,""],["Em aberto",st.ab.length,C.blue],["Total investido",frf(st.ti),C.yellow],["Lucro líquido",frf(st.lt),st.lt>=0?C.green:C.red],["ROI",(st.roi*100).toFixed(2)+"%",st.roi>=0?C.green:C.red],["Taxa de acerto",(st.ac*100).toFixed(1)+"% ("+st.acNum+"/"+st.acDen+")",C.green],["Ret. potencial",frf(st.pot),C.yellow]].map(([k,v,c])=>(
+              {[["Total apostas",apostas.length,""],["Encerradas",st.enc.length,""],["Em aberto",st.ab.length,C.blue],["Total investido",frf(st.ti),C.yellow],["Lucro líquido",frf(st.lt),st.lt>=0?C.green:C.red],["ROI",(st.roi*100).toFixed(2)+"%",st.roi>=0?C.green:C.red],["Taxa de acerto",(st.ac*100).toFixed(1)+"% ("+st.gr.length+"/"+st.enc.length+")",C.green],["Ret. potencial",frf(st.pot),C.yellow]].map(([k,v,c])=>(
                 <div key={k} style={sRow}><span style={{color:C.gray}}>{k}</span><span style={{fontWeight:700,fontFamily:"'JetBrains Mono',monospace",fontSize:".71rem",color:c||C.white}}>{v}</span></div>
               ))}
             </div>
-
             <SectionTitle>Power Ranking de Seleções</SectionTitle>
             <div style={{...sBlock,marginBottom:14}}>
               <div style={{fontSize:".61rem",textTransform:"uppercase",letterSpacing:2,color:C.gray,fontWeight:700,marginBottom:14}}>🏆 Top 15 seleções por stake total apostada</div>
               {pr.length===0 ? <div style={{textAlign:"center",padding:"20px",color:C.gray,fontSize:".8rem"}}>Nenhuma seleção ainda.</div> :
               pr.map(r=>{
-                const maxStake=pr[0].stake;
-                const pct=(r.stake/maxStake*100).toFixed(1);
+                const maxStake=pr[0].stake; const pct=(r.stake/maxStake*100).toFixed(1);
                 const medalCor=r.pos===1?C.yellow:r.pos===2?"#C0C0C0":r.pos===3?"#CD7F32":C.gray;
                 return(
                   <div key={r.nome} style={{marginBottom:10}}>
@@ -725,9 +722,10 @@ export default function App() {
         );
       })()}
 
+      {/* ── MODAL STATUS ── */}
       {modal && modalAposta && (
         <div onClick={e=>{if(e.target===e.currentTarget)setModal(null);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",backdropFilter:"blur(8px)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:C.card2,border:`1px solid ${C.border2}`,borderRadius:14,padding:24,width:"100%",maxWidth:420,boxShadow:"0 20px 60px rgba(0,0,0,.6)"}}>
+          <div style={{background:C.card2,border:`1px solid ${C.border2}`,borderRadius:14,padding:24,width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,.6)"}}>
             <div style={{fontFamily:"'Bebas Neue',Impact,sans-serif",fontSize:"1.15rem",letterSpacing:2,color:C.green,marginBottom:4}}>{modalAposta.id}</div>
             <div style={{fontSize:".73rem",color:C.gray,marginBottom:16}}>{modalAposta.tipo} · {modalAposta.casa} · {modalAposta.data}</div>
             <div style={{marginBottom:14}}>
@@ -757,34 +755,17 @@ export default function App() {
               <div style={{background:"rgba(251,146,60,.06)",border:"1px solid rgba(251,146,60,.25)",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
                 <div style={{fontSize:".6rem",textTransform:"uppercase",letterSpacing:1.5,color:C.cashout,fontWeight:700,marginBottom:8}}>Valor recebido no cashout (R$)</div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={cashoutInput[modal.id] ?? modalAposta.valor}
-                    onChange={e=>setCashoutInput(p=>({...p,[modal.id]:e.target.value}))}
-                    style={{...inp,flex:1,border:"1px solid rgba(251,146,60,.35)",background:C.bg2}}
-                  />
-                  <button
-                    onClick={()=>{ const v=parseFloat(cashoutInput[modal.id]); if(isNaN(v)||v<0) return; setStatus("Cashout", v); }}
-                    style={{padding:"9px 16px",borderRadius:9,fontSize:".73rem",fontWeight:700,cursor:"pointer",background:C.cashout,color:"#1a0a00",border:"none",whiteSpace:"nowrap",boxShadow:"0 2px 12px rgba(251,146,60,.3)"}}
-                  >Confirmar</button>
+                  <input type="number" step="0.01" value={cashoutInput[modal.id]??modalAposta.valor} onChange={e=>setCashoutInput(p=>({...p,[modal.id]:e.target.value}))} style={{...inp,flex:1,border:"1px solid rgba(251,146,60,.35)",background:C.bg2}}/>
+                  <button onClick={()=>{ const v=parseFloat(cashoutInput[modal.id]); if(isNaN(v)||v<0)return; setStatus("Cashout",v); }} style={{padding:"9px 16px",borderRadius:9,fontSize:".73rem",fontWeight:700,cursor:"pointer",background:C.cashout,color:"#1a0a00",border:"none",whiteSpace:"nowrap",boxShadow:"0 2px 12px rgba(251,146,60,.3)"}}>Confirmar</button>
                 </div>
                 <div style={{fontSize:".6rem",color:C.gray,marginTop:6}}>
-                  Lucro/prejuízo: <b style={{color:(parseFloat(cashoutInput[modal.id]??modalAposta.valor)-modalAposta.valor)>=0?C.green:C.red}}>
-                    {frf((parseFloat(cashoutInput[modal.id]??modalAposta.valor)||0) - modalAposta.valor)}
-                  </b>
+                  Lucro/prejuízo: <b style={{color:(parseFloat(cashoutInput[modal.id]??modalAposta.valor)-modalAposta.valor)>=0?C.green:C.red}}>{frf((parseFloat(cashoutInput[modal.id]??modalAposta.valor)||0)-modalAposta.valor)}</b>
                 </div>
               </div>
             )}
-            <button
-              onClick={()=>{ setShowEdit(true); }}
-              style={{width:"100%",padding:10,borderRadius:9,fontSize:".7rem",fontWeight:700,cursor:"pointer",background:"rgba(74,222,128,.08)",color:C.green,border:"1px solid rgba(74,222,128,.2)",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}
-            >✏️ Editar Aposta</button>
+            <button onClick={()=>setShowEdit(true)} style={{width:"100%",padding:10,borderRadius:9,fontSize:".7rem",fontWeight:700,cursor:"pointer",background:"rgba(74,222,128,.08)",color:C.green,border:"1px solid rgba(74,222,128,.2)",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>✏️ Editar Aposta</button>
             {!confirmDelete ? (
-              <button
-                onClick={()=>setConfirmDelete(true)}
-                style={{width:"100%",padding:10,borderRadius:9,fontSize:".7rem",fontWeight:700,cursor:"pointer",background:"rgba(220,38,38,.08)",color:C.red,border:"1px solid rgba(220,38,38,.18)",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}
-              >🗑 Excluir Aposta</button>
+              <button onClick={()=>setConfirmDelete(true)} style={{width:"100%",padding:10,borderRadius:9,fontSize:".7rem",fontWeight:700,cursor:"pointer",background:"rgba(220,38,38,.08)",color:C.red,border:"1px solid rgba(220,38,38,.18)",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>🗑 Excluir Aposta</button>
             ) : (
               <div style={{background:"rgba(220,38,38,.08)",border:"1px solid rgba(220,38,38,.25)",borderRadius:9,padding:"12px 14px",marginBottom:8}}>
                 <div style={{fontSize:".72rem",color:C.red,fontWeight:600,marginBottom:10,textAlign:"center"}}>Tem certeza? Essa ação não pode ser desfeita.</div>
@@ -794,20 +775,13 @@ export default function App() {
                 </div>
               </div>
             )}
-            <button onClick={()=>{ setModal(null); setConfirmDelete(false); setShowCashoutField(false); }} style={{width:"100%",padding:9,borderRadius:9,fontSize:".7rem",cursor:"pointer",background:"transparent",color:C.gray,border:`1px solid ${C.border}`}}>Fechar</button>
+            <button onClick={()=>{setModal(null);setConfirmDelete(false);setShowCashoutField(false);}} style={{width:"100%",padding:9,borderRadius:9,fontSize:".7rem",cursor:"pointer",background:"transparent",color:C.gray,border:`1px solid ${C.border}`}}>Fechar</button>
           </div>
         </div>
       )}
 
       {showAdd && <ModalAdicionarBet onSave={adicionarBet} onClose={()=>setShowAdd(false)}/>}
-      {showEdit && modalAposta && (
-        <ModalAdicionarBet
-          apostaDados={modalAposta}
-          onSave={editarBet}
-          onClose={()=>setShowEdit(false)}
-        />
-      )}
-
+      {showEdit && modalAposta && <ModalAdicionarBet apostaDados={modalAposta} onSave={editarBet} onClose={()=>setShowEdit(false)}/>}
       {toast && <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:C.card2,border:`1px solid ${toast.tipo==="ok"?"rgba(74,222,128,.28)":"rgba(248,113,113,.28)"}`,borderRadius:99,padding:"10px 22px",fontSize:".76rem",fontWeight:600,zIndex:999,color:toast.tipo==="ok"?C.green:C.red,whiteSpace:"nowrap",boxShadow:"0 4px 24px rgba(0,0,0,.4)"}}>{toast.msg}</div>}
     </div>
   );
